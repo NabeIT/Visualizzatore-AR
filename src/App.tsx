@@ -15,7 +15,7 @@ import {
 import { Scan } from 'lucide-react';
 import type { BufferGeometry, Mesh, Object3D, Texture } from 'three';
 import { Canvas, useThree } from '@react-three/fiber';
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { XR, createXRStore, useXR } from '@react-three/xr';
 
 import { Line } from '@react-three/drei/core/Line';
@@ -26,16 +26,58 @@ import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLigh
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Text } from '@react-three/drei/core/Text';
 
-const DEFAULT_MODEL_URL = import.meta.env.VITE_MODEL_URL || '/models/letto-completo.glb';
-const DEFAULT_USDZ_MODEL_URL = import.meta.env.VITE_USDZ_MODEL_URL || '/models/letto-completo.usdz';
+const MODEL_CONFIG_URL = import.meta.env.VITE_MODEL_CONFIG_URL || '/viewer-models.json';
+const DEFAULT_MODEL_URL = import.meta.env.VITE_MODEL_URL || '/models/letto-97.glb';
+const DEFAULT_USDZ_MODEL_URL = import.meta.env.VITE_USDZ_MODEL_URL || '/models/letto-97.usdz';
 const DEFAULT_WOOD_TEXTURE_URL = import.meta.env.VITE_WOOD_TEXTURE_URL || '/textures/wood.jpg';
-const QUICK_LOOK_ASSET_VERSION = '7';
+const QUICK_LOOK_ASSET_VERSION = '9';
 const STUDIO_BACKGROUND: [number, number, number] = [1.2, 1.2, 1.2];
+const DESKTOP_CAMERA_POSITION: [number, number, number] = [2.55, 1.15, 2.9];
+const MOBILE_CAMERA_POSITION: [number, number, number] = [3.55, 1.55, 4.05];
+const CAMERA_TARGET: [number, number, number] = [0, 0.26, 0];
 const WOOD_BOX_UV_SCALE = 1;
 const ENVIRONMENT_INTENSITY = 0.8;
 const DIMENSION_LINE_COLOR = '#263238';
 const DIMENSION_LABEL_COLOR = '#172327';
 const ViewerAO = React.lazy(() => import('./ViewerAO'));
+
+type ViewerModelConfig = {
+  id: string;
+  label: string;
+  modelUrl: string;
+  usdzUrl: string;
+  textureUrl?: string;
+  quickLookVersion?: string;
+  materialMode?: 'original' | 'sharedWood';
+};
+
+type ViewerMaterialMode = NonNullable<ViewerModelConfig['materialMode']>;
+
+type ViewerModelCatalog = {
+  defaultModelId?: string;
+  models: ViewerModelConfig[];
+};
+
+type PreparedViewerAsset = {
+  modelUrl: string;
+  materialMode: ViewerMaterialMode;
+  gltf: GLTF;
+};
+
+const FALLBACK_MODELS: ViewerModelConfig[] = [
+  {
+    id: 'letto-97',
+    label: 'Letto 97',
+    modelUrl: DEFAULT_MODEL_URL,
+    usdzUrl: DEFAULT_USDZ_MODEL_URL,
+    textureUrl: DEFAULT_WOOD_TEXTURE_URL,
+    quickLookVersion: QUICK_LOOK_ASSET_VERSION,
+    materialMode: 'sharedWood',
+  },
+];
+
+const preparedAssetCache = new Map<string, Promise<PreparedViewerAsset>>();
+const textureCache = new Map<string, Promise<Texture | null>>();
 
 const xrStore = createXRStore({
   emulate: false,
@@ -68,12 +110,26 @@ export default function App() {
   const [quickLookOpening, setQuickLookOpening] = useState(false);
   const [xrError, setXrError] = useState('');
   const mobileSafariCompat = useMobileSafariCompatibility();
-  const assets = useViewerAssets(DEFAULT_MODEL_URL, DEFAULT_WOOD_TEXTURE_URL);
-  const quickLookAssetHref = `${DEFAULT_USDZ_MODEL_URL}?v=${QUICK_LOOK_ASSET_VERSION}`;
+  const modelCatalog = useModelCatalog();
+  const selectedModel = modelCatalog.selectedModel;
+  const selectedMaterialMode = selectedModel.materialMode ?? 'sharedWood';
+  const assets = useViewerAssets(
+    selectedModel.modelUrl,
+    selectedModel.textureUrl ?? DEFAULT_WOOD_TEXTURE_URL,
+    selectedMaterialMode,
+  );
+  const quickLookVersion = selectedModel.quickLookVersion ?? QUICK_LOOK_ASSET_VERSION;
+  const quickLookAssetHref = withVersion(selectedModel.usdzUrl, quickLookVersion);
   const quickLookHref = `${quickLookAssetHref}#allowsContentScaling=0`;
   const useQuickLook = mobileSafariCompat;
   const viewerPaused = quickLookOpening && mobileSafariCompat;
+  const cameraPosition = mobileSafariCompat ? MOBILE_CAMERA_POSITION : DESKTOP_CAMERA_POSITION;
+  const selectedAssetsReady =
+    assets.status === 'ready' &&
+    assets.modelUrl === selectedModel.modelUrl &&
+    assets.materialMode === selectedMaterialMode;
 
+  usePreloadModelAssets(modelCatalog.models);
   useQuickLookWarmup(mobileSafariCompat, quickLookAssetHref);
 
   useEffect(() => {
@@ -140,6 +196,10 @@ export default function App() {
 
   return (
     <main className="viewer-shell">
+      <div className="viewer-title" aria-label="Letto evolutivo zero+ Earth">
+        Letto evolutivo zero+ Earth
+      </div>
+
       <ArButton
         arReady={arReady}
         onQuickLookOpen={() => setQuickLookOpening(true)}
@@ -147,16 +207,23 @@ export default function App() {
         onEnterAr={enterAr}
         useQuickLook={useQuickLook}
       />
+      <ModelSwitcher
+        models={modelCatalog.models}
+        selectedModelId={selectedModel.id}
+        onSelect={modelCatalog.selectModel}
+      />
 
       {xrError ? <p className="viewer-alert">{xrError}</p> : null}
-      {assets.status === 'error' ? <p className="viewer-alert">{assets.message}</p> : null}
+      {assets.status === 'error' && assets.modelUrl === selectedModel.modelUrl ? (
+        <p className="viewer-alert">{assets.message}</p>
+      ) : null}
       {quickLookOpening ? <ArOpeningOverlay /> : null}
 
       <Canvas
-        dpr={mobileSafariCompat ? [1, 1.25] : [1, 2]}
+        dpr={mobileSafariCompat ? [1, 2] : [1, 2]}
         frameloop={viewerPaused ? 'never' : mobileSafariCompat ? 'always' : 'demand'}
         shadows
-        camera={{ position: [2.55, 1.15, 2.9], fov: 42, near: 0.1, far: 80 }}
+        camera={{ position: cameraPosition, fov: 42, near: 0.1, far: 80 }}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
         onCreated={({ gl }) => {
           gl.outputColorSpace = SRGBColorSpace;
@@ -167,15 +234,145 @@ export default function App() {
       >
         <color attach="background" args={STUDIO_BACKGROUND} />
         <XR store={xrStore}>
-          {assets.status === 'ready' && !viewerPaused ? (
-            <Scene enableAO={!mobileSafariCompat} assets={assets} />
+          {selectedAssetsReady && !viewerPaused ? (
+            <Scene
+              assets={assets}
+              aoQuality={mobileSafariCompat ? 'mobile' : 'desktop'}
+              cameraPosition={cameraPosition}
+            />
           ) : null}
         </XR>
       </Canvas>
 
-      <FpsBox active={!viewerPaused} />
+      {/* <FpsBox active={!viewerPaused} /> */}
     </main>
   );
+}
+
+function useModelCatalog() {
+  const [catalog, setCatalog] = useState<ViewerModelCatalog>({
+    defaultModelId: FALLBACK_MODELS[0].id,
+    models: FALLBACK_MODELS,
+  });
+  const [selectedModelId, setSelectedModelId] = useState(FALLBACK_MODELS[0].id);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch(MODEL_CONFIG_URL, { cache: 'no-cache' })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Model config failed: ${response.status}`);
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        if (!active) {
+          return;
+        }
+
+        const nextCatalog = normalizeModelCatalog(data);
+        setCatalog(nextCatalog);
+        setSelectedModelId((currentModelId) => {
+          const hasCurrentModel = nextCatalog.models.some((model) => model.id === currentModelId);
+          return hasCurrentModel ? currentModelId : nextCatalog.defaultModelId ?? nextCatalog.models[0].id;
+        });
+      })
+      .catch((error) => {
+        if (active) {
+          console.warn('Model config failed, using fallback model', error);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return useMemo(() => {
+    const selectedModel =
+      catalog.models.find((model) => model.id === selectedModelId) ?? catalog.models[0];
+
+    return {
+      models: catalog.models,
+      selectedModel,
+      selectModel: setSelectedModelId,
+    };
+  }, [catalog, selectedModelId]);
+}
+
+function normalizeModelCatalog(data: unknown): ViewerModelCatalog {
+  if (!data || typeof data !== 'object') {
+    return {
+      defaultModelId: FALLBACK_MODELS[0].id,
+      models: FALLBACK_MODELS,
+    };
+  }
+
+  const value = data as { defaultModelId?: unknown; models?: unknown };
+  const models = Array.isArray(value.models)
+    ? value.models.flatMap((model) => {
+      const normalizedModel = normalizeModelConfig(model);
+      return normalizedModel ? [normalizedModel] : [];
+    })
+    : [];
+
+  if (models.length === 0) {
+    return {
+      defaultModelId: FALLBACK_MODELS[0].id,
+      models: FALLBACK_MODELS,
+    };
+  }
+
+  const defaultModelId =
+    typeof value.defaultModelId === 'string' && models.some((model) => model.id === value.defaultModelId)
+      ? value.defaultModelId
+      : models[0].id;
+
+  return {
+    defaultModelId,
+    models,
+  };
+}
+
+function normalizeModelConfig(data: unknown): ViewerModelConfig | null {
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+
+  const value = data as Record<string, unknown>;
+  const id = typeof value.id === 'string' ? value.id : '';
+  const label =
+    typeof value.label === 'string'
+      ? value.label
+      : typeof value.name === 'string'
+        ? value.name
+        : id;
+  const modelUrl = typeof value.modelUrl === 'string' ? value.modelUrl : '';
+  const usdzUrl = typeof value.usdzUrl === 'string' ? value.usdzUrl : '';
+
+  if (!id || !modelUrl || !usdzUrl) {
+    return null;
+  }
+
+  return {
+    id,
+    label,
+    modelUrl,
+    usdzUrl,
+    textureUrl: typeof value.textureUrl === 'string' ? value.textureUrl : DEFAULT_WOOD_TEXTURE_URL,
+    quickLookVersion:
+      typeof value.quickLookVersion === 'string' || typeof value.quickLookVersion === 'number'
+        ? String(value.quickLookVersion)
+        : QUICK_LOOK_ASSET_VERSION,
+    materialMode: value.materialMode === 'original' ? 'original' : 'sharedWood',
+  };
+}
+
+function withVersion(url: string, version: string) {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}v=${encodeURIComponent(version)}`;
 }
 
 function ArOpeningOverlay() {
@@ -259,60 +456,145 @@ function useMobileSafariCompatibility() {
 
 type ViewerAssets =
   | { status: 'loading' }
-  | { status: 'ready'; gltf: GLTF; woodTexture: Texture | null }
-  | { status: 'error'; message: string };
+  | {
+    status: 'ready';
+    modelUrl: string;
+    materialMode: ViewerMaterialMode;
+    gltf: GLTF;
+  }
+  | { status: 'error'; modelUrl: string; message: string };
 
-function useViewerAssets(modelUrl: string, woodTextureUrl: string): ViewerAssets {
+function useViewerAssets(
+  modelUrl: string,
+  woodTextureUrl: string,
+  materialMode: ViewerMaterialMode,
+): ViewerAssets {
   const [assets, setAssets] = useState<ViewerAssets>({ status: 'loading' });
 
   useEffect(() => {
     let active = true;
-    const dracoLoader = new DRACOLoader();
-    const gltfLoader = new GLTFLoader();
-    const textureLoader = new TextureLoader();
-
-    dracoLoader.setDecoderPath('/draco/');
-    gltfLoader.setDRACOLoader(dracoLoader);
-
-    const modelPromise = new Promise<GLTF>((resolve, reject) => {
-      gltfLoader.load(modelUrl, resolve, undefined, reject);
-    });
-
-    const texturePromise = new Promise<Texture | null>((resolve) => {
-      textureLoader.load(
-        woodTextureUrl,
-        (texture) => {
-          prepareWoodTexture(texture);
-          resolve(texture);
-        },
-        undefined,
-        () => resolve(null),
-      );
-    });
-
     setAssets({ status: 'loading' });
 
-    Promise.all([modelPromise, texturePromise])
-      .then(([gltf, woodTexture]) => {
+    loadPreparedViewerAsset(modelUrl, woodTextureUrl, materialMode)
+      .then((asset) => {
         if (active) {
-          setAssets({ status: 'ready', gltf, woodTexture });
+          setAssets({ status: 'ready', ...asset });
         }
       })
       .catch((error) => {
         console.error('Model load failed', error);
 
         if (active) {
-          setAssets({ status: 'error', message: 'Modello non caricato' });
+          setAssets({ status: 'error', modelUrl, message: 'Modello non caricato' });
         }
       });
 
     return () => {
       active = false;
-      dracoLoader.dispose();
     };
-  }, [modelUrl, woodTextureUrl]);
+  }, [materialMode, modelUrl, woodTextureUrl]);
 
   return assets;
+}
+
+function usePreloadModelAssets(models: ViewerModelConfig[]) {
+  useEffect(() => {
+    let active = true;
+
+    models.forEach((model) => {
+      const materialMode = model.materialMode ?? 'sharedWood';
+      const textureUrl = model.textureUrl ?? DEFAULT_WOOD_TEXTURE_URL;
+
+      loadPreparedViewerAsset(model.modelUrl, textureUrl, materialMode).catch((error) => {
+        if (active) {
+          console.warn(`Model preload failed: ${model.modelUrl}`, error);
+        }
+      });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [models]);
+}
+
+function loadPreparedViewerAsset(
+  modelUrl: string,
+  woodTextureUrl: string,
+  materialMode: ViewerMaterialMode,
+) {
+  const cacheKey = `${modelUrl}|${woodTextureUrl}|${materialMode}`;
+  const cachedAsset = preparedAssetCache.get(cacheKey);
+
+  if (cachedAsset) {
+    return cachedAsset;
+  }
+
+  const assetPromise = Promise.all([
+    loadGltf(modelUrl),
+    materialMode === 'sharedWood' ? loadWoodTexture(woodTextureUrl) : Promise.resolve(null),
+  ]).then(([gltf, woodTexture]) => {
+    prepareLoadedModel(gltf, woodTexture, materialMode);
+
+    return {
+      modelUrl,
+      materialMode,
+      gltf,
+    };
+  });
+
+  assetPromise.catch(() => {
+    preparedAssetCache.delete(cacheKey);
+  });
+  preparedAssetCache.set(cacheKey, assetPromise);
+  return assetPromise;
+}
+
+function loadGltf(modelUrl: string) {
+  const dracoLoader = new DRACOLoader();
+  const gltfLoader = new GLTFLoader();
+
+  dracoLoader.setDecoderPath('/draco/');
+  gltfLoader.setDRACOLoader(dracoLoader);
+
+  return new Promise<GLTF>((resolve, reject) => {
+    gltfLoader.load(
+      modelUrl,
+      (gltf) => {
+        dracoLoader.dispose();
+        resolve(gltf);
+      },
+      undefined,
+      (error) => {
+        dracoLoader.dispose();
+        reject(error);
+      },
+    );
+  });
+}
+
+function loadWoodTexture(textureUrl: string) {
+  const cachedTexture = textureCache.get(textureUrl);
+
+  if (cachedTexture) {
+    return cachedTexture;
+  }
+
+  const textureLoader = new TextureLoader();
+  const texturePromise = new Promise<Texture | null>((resolve) => {
+    textureLoader.load(
+      textureUrl,
+      (texture) => {
+        prepareWoodTexture(texture);
+        resolve(texture);
+      },
+      undefined,
+      () => resolve(null),
+    );
+  });
+
+  textureCache.set(textureUrl, texturePromise);
+  return texturePromise;
 }
 
 function FpsBox({ active }: { active: boolean }) {
@@ -365,6 +647,40 @@ function FpsBox({ active }: { active: boolean }) {
   );
 }
 
+function ModelSwitcher({
+  models,
+  selectedModelId,
+  onSelect,
+}: {
+  models: ViewerModelConfig[];
+  selectedModelId: string;
+  onSelect: (modelId: string) => void;
+}) {
+  if (models.length <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="model-switcher" role="group" aria-label="Selezione modello">
+      {models.map((model) => {
+        const selected = model.id === selectedModelId;
+
+        return (
+          <button
+            key={model.id}
+            className="model-switcher-button"
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onSelect(model.id)}
+          >
+            {model.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ArButton({
   arReady,
   onQuickLookOpen,
@@ -399,8 +715,6 @@ function ArButton({
             className="ar-quicklook-proxy"
             src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
           />
-          <Scan size={19} aria-hidden="true" />
-          <span>Visualizza nella tua stanza</span>
         </a>
       ) : (
         <button
@@ -420,26 +734,26 @@ function ArButton({
 
 function Scene({
   assets,
-  enableAO,
+  aoQuality,
+  cameraPosition,
 }: {
   assets: Extract<ViewerAssets, { status: 'ready' }>;
-  enableAO: boolean;
+  aoQuality: 'desktop' | 'mobile';
+  cameraPosition: [number, number, number];
 }) {
   return (
     <>
       <StudioLighting />
       <GeneratedEnvironment />
 
-      <ModelPresentation gltf={assets.gltf} woodTexture={assets.woodTexture} />
+      <ModelPresentation gltf={assets.gltf} />
 
       <InvisibleGround />
 
-      <DesktopCameraControls />
-      {enableAO ? (
-        <Suspense fallback={null}>
-          <ViewerAO />
-        </Suspense>
-      ) : null}
+      <ViewerCameraControls cameraPosition={cameraPosition} />
+      <Suspense fallback={null}>
+        <ViewerAO quality={aoQuality} />
+      </Suspense>
       <Preload all />
     </>
   );
@@ -456,17 +770,15 @@ type Point3 = [number, number, number];
 
 function ModelPresentation({
   gltf,
-  woodTexture,
 }: {
   gltf: GLTF;
-  woodTexture: Texture | null;
 }) {
   const bounds = useMemo(() => computeModelBounds(gltf.scene), [gltf.scene]);
 
   return (
     <group position={bounds?.offset ?? [0, 0, 0]}>
       <SceneErrorBoundary fallback={null}>
-        <LoadedModel gltf={gltf} woodTexture={woodTexture} />
+        <LoadedModel gltf={gltf} />
       </SceneErrorBoundary>
       {bounds ? <DimensionGuides bounds={bounds} /> : null}
     </group>
@@ -780,7 +1092,7 @@ function GeneratedEnvironment() {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const pmrem = new PMREMGenerator(gl);
     const room = new RoomEnvironment();
 
@@ -803,44 +1115,41 @@ function GeneratedEnvironment() {
   return null;
 }
 
-function LoadedModel({
-  gltf,
-  woodTexture,
-}: {
-  gltf: GLTF;
-  woodTexture: Texture | null;
-}) {
-  const woodMaterial = useMemo(() => createWoodMaterial(woodTexture), [woodTexture]);
-
-  useEffect(() => {
-    gltf.scene.traverse((child) => {
-      const mesh = child as Mesh;
-
-      if (mesh.isMesh) {
-        if (isHelperBoundsMesh(mesh)) {
-          mesh.visible = false;
-          return;
-        }
-
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        mesh.geometry = ensureBoxUv(mesh.geometry);
-        mesh.material = woodMaterial;
-      }
-    });
-  }, [gltf.scene, woodMaterial]);
-
-  useEffect(() => {
-    return () => {
-      woodMaterial.dispose();
-    };
-  }, [woodMaterial]);
-
+function LoadedModel({ gltf }: { gltf: GLTF }) {
   return (
     <group>
       <primitive object={gltf.scene} />
     </group>
   );
+}
+
+function prepareLoadedModel(
+  gltf: GLTF,
+  woodTexture: Texture | null,
+  materialMode: ViewerMaterialMode,
+) {
+  const woodMaterial = materialMode === 'sharedWood' ? createWoodMaterial(woodTexture) : null;
+
+  gltf.scene.traverse((child) => {
+    const mesh = child as Mesh;
+
+    if (!mesh.isMesh) {
+      return;
+    }
+
+    if (isHelperBoundsMesh(mesh)) {
+      mesh.visible = false;
+      return;
+    }
+
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    if (woodMaterial) {
+      mesh.geometry = ensureBoxUv(mesh.geometry);
+      mesh.material = woodMaterial;
+    }
+  });
 }
 
 function isHelperBoundsMesh(mesh: Mesh) {
@@ -931,16 +1240,16 @@ function ensureBoxUv(geometry: BufferGeometry) {
   return boxGeometry;
 }
 
-function DesktopCameraControls() {
+function ViewerCameraControls({ cameraPosition }: { cameraPosition: [number, number, number] }) {
   const controls = useRef<OrbitControlsImpl | null>(null);
   const camera = useThree((state) => state.camera);
   const isInXR = useXR((state) => Boolean(state.session));
 
   useEffect(() => {
-    camera.position.set(2.55, 1.15, 2.9);
-    controls.current?.target.set(0, 0.26, 0);
+    camera.position.set(...cameraPosition);
+    controls.current?.target.set(...CAMERA_TARGET);
     controls.current?.update();
-  }, [camera]);
+  }, [camera, cameraPosition]);
 
   return (
     <OrbitControls
@@ -952,7 +1261,7 @@ function DesktopCameraControls() {
       minDistance={2}
       maxDistance={8}
       maxPolarAngle={Math.PI / 2.02}
-      target={[0, 0.26, 0]}
+      target={CAMERA_TARGET}
       enablePan={false}
     />
   );

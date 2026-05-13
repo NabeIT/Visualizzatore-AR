@@ -1,0 +1,38 @@
+{
+  "defaultModelId": "letto-97",
+  "models": [
+    {
+      "id": "letto-97",
+      "label": "160cm X 80cm",
+      "modelUrl": "/models/letto-97.glb",
+      "usdzUrl": "/models/letto-97.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "11",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    },
+    {
+      "id": "letto-125",
+      "label": "190 X 120cm",
+      "modelUrl": "/models/letto-125.glb",
+      "usdzUrl": "/models/letto-125.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "11",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    },
+    {
+      "id": "letto-97-202",
+      "label": "190cm X 80cm",
+      "modelUrl": "/models/letto-97-202.glb",
+      "usdzUrl": "/models/letto-97-202.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "11",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    }
+  ]
+}

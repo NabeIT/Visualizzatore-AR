@@ -33,6 +33,7 @@ export default defineConfig({
       "localhost",
       "8eed-2001-b07-2e7-180b-7c55-c4fd-1da1-72d1.ngrok-free.app",
       "6876-2001-b07-2e7-180b-f4be-c07e-9c43-7b27.ngrok-free.app",
+      "848b-2001-b07-2e7-180b-b18a-10b0-4cc6-28c0.ngrok-free.app",
     ],
   },
 });
