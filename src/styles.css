@@ -41,9 +41,14 @@ a {
 }
 
 .viewer-shell {
+  --ar-control-bottom: max(48px, calc(env(safe-area-inset-bottom) + 38px));
+  --model-control-bottom: max(108px, calc(env(safe-area-inset-bottom) + 98px));
+  --feedback-bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px));
+
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   min-height: 480px;
   overflow: hidden;
   background: #ffffff;
@@ -78,10 +83,10 @@ a {
 }
 
 .model-switcher {
-  position: absolute;
+  position: fixed;
   z-index: 5;
   left: 50%;
-  bottom: max(108px, calc(env(safe-area-inset-bottom) + 98px));
+  bottom: var(--model-control-bottom);
   display: inline-flex;
   gap: 6px;
   max-width: calc(100vw - 32px);
@@ -141,7 +146,7 @@ a {
   position: fixed;
   z-index: 5;
   left: 50%;
-  bottom: max(48px, calc(env(safe-area-inset-bottom) + 38px));
+  bottom: var(--ar-control-bottom);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -215,7 +220,7 @@ a.ar-button[rel='ar']::after {
   position: absolute;
   z-index: 6;
   left: 50%;
-  bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px));
+  bottom: var(--feedback-bottom);
   width: min(520px, calc(100vw - 32px));
   margin: 0;
   transform: translateX(-50%);
@@ -233,7 +238,7 @@ a.ar-button[rel='ar']::after {
   position: absolute;
   z-index: 7;
   left: 50%;
-  bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px));
+  bottom: var(--feedback-bottom);
   display: grid;
   grid-template-columns: auto auto;
   align-items: center;
@@ -321,6 +326,11 @@ a.ar-button[rel='ar']::after {
 
 @media (max-width: 700px) {
   .viewer-shell {
+    --ar-control-bottom: max(126px, calc(env(safe-area-inset-bottom) + 116px));
+    --model-control-bottom: max(188px, calc(env(safe-area-inset-bottom) + 178px));
+    --feedback-bottom: max(188px, calc(env(safe-area-inset-bottom) + 178px));
+
+    height: 100svh;
     min-height: 100svh;
   }
 
@@ -328,10 +338,6 @@ a.ar-button[rel='ar']::after {
     top: max(12px, env(safe-area-inset-top));
     padding: 8px 12px;
     font-size: 0.82rem;
-  }
-
-  .model-switcher {
-    bottom: max(104px, calc(env(safe-area-inset-bottom) + 94px));
   }
 
   .model-switcher-button {
