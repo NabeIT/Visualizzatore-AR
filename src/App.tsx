@@ -41,6 +41,21 @@ const DIMENSION_LINE_COLOR = '#263238';
 const DIMENSION_LABEL_COLOR = '#172327';
 const ViewerAO = React.lazy(() => import('./ViewerAO'));
 
+type ArLaunchMode = 'quick-look' | 'scene-viewer' | 'webxr';
+
+type ArPlatform = {
+  quickLook: boolean;
+  sceneViewer: boolean;
+  mobile: boolean;
+};
+
+type NavigatorWithUserAgentData = Navigator & {
+  userAgentData?: {
+    mobile?: boolean;
+    platform?: string;
+  };
+};
+
 type ViewerModelConfig = {
   id: string;
   label: string;
@@ -107,9 +122,9 @@ class SceneErrorBoundary extends React.Component<
 
 export default function App() {
   const [arReady, setArReady] = useState<boolean | null>(null);
-  const [quickLookOpening, setQuickLookOpening] = useState(false);
+  const [externalArOpening, setExternalArOpening] = useState(false);
   const [xrError, setXrError] = useState('');
-  const mobileSafariCompat = useMobileSafariCompatibility();
+  const arPlatform = useArPlatform();
   const modelCatalog = useModelCatalog();
   const selectedModel = modelCatalog.selectedModel;
   const selectedMaterialMode = selectedModel.materialMode ?? 'sharedWood';
@@ -121,16 +136,17 @@ export default function App() {
   const quickLookVersion = selectedModel.quickLookVersion ?? QUICK_LOOK_ASSET_VERSION;
   const quickLookAssetHref = withVersion(selectedModel.usdzUrl, quickLookVersion);
   const quickLookHref = `${quickLookAssetHref}#allowsContentScaling=0`;
-  const useQuickLook = mobileSafariCompat;
-  const viewerPaused = quickLookOpening && mobileSafariCompat;
-  const cameraPosition = mobileSafariCompat ? MOBILE_CAMERA_POSITION : DESKTOP_CAMERA_POSITION;
+  const sceneViewerHref = createSceneViewerHref(selectedModel.modelUrl, selectedModel.label);
+  const arLaunchMode = getArLaunchMode(arPlatform, arReady);
+  const viewerPaused = externalArOpening && arPlatform.quickLook;
+  const cameraPosition = arPlatform.mobile ? MOBILE_CAMERA_POSITION : DESKTOP_CAMERA_POSITION;
   const selectedAssetsReady =
     assets.status === 'ready' &&
     assets.modelUrl === selectedModel.modelUrl &&
     assets.materialMode === selectedMaterialMode;
 
   usePreloadModelAssets(modelCatalog.models);
-  useQuickLookWarmup(mobileSafariCompat, quickLookAssetHref);
+  useQuickLookWarmup(arPlatform.quickLook, quickLookAssetHref);
 
   useEffect(() => {
     let alive = true;
@@ -159,11 +175,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!quickLookOpening) {
+    if (!externalArOpening) {
       return;
     }
 
-    const closeOpeningState = () => setQuickLookOpening(false);
+    const closeOpeningState = () => setExternalArOpening(false);
     const timeout = window.setTimeout(closeOpeningState, 7000);
 
     const onVisibilityChange = () => {
@@ -182,7 +198,7 @@ export default function App() {
       window.removeEventListener('pageshow', closeOpeningState);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [quickLookOpening]);
+  }, [externalArOpening]);
 
   const enterAr = async () => {
     setXrError('');
@@ -201,11 +217,11 @@ export default function App() {
       </div>
 
       <ArButton
-        arReady={arReady}
-        onQuickLookOpen={() => setQuickLookOpening(true)}
+        arLaunchMode={arLaunchMode}
+        onExternalArOpen={() => setExternalArOpening(true)}
         quickLookHref={quickLookHref}
+        sceneViewerHref={sceneViewerHref}
         onEnterAr={enterAr}
-        useQuickLook={useQuickLook}
       />
       <ModelSwitcher
         models={modelCatalog.models}
@@ -217,11 +233,11 @@ export default function App() {
       {assets.status === 'error' && assets.modelUrl === selectedModel.modelUrl ? (
         <p className="viewer-alert">{assets.message}</p>
       ) : null}
-      {quickLookOpening ? <ArOpeningOverlay /> : null}
+      {externalArOpening ? <ArOpeningOverlay /> : null}
 
       <Canvas
-        dpr={mobileSafariCompat ? [1, 2] : [1, 2]}
-        frameloop={viewerPaused ? 'never' : mobileSafariCompat ? 'always' : 'demand'}
+        dpr={[1, 2]}
+        frameloop={viewerPaused ? 'never' : arPlatform.mobile ? 'always' : 'demand'}
         shadows
         camera={{ position: cameraPosition, fov: 42, near: 0.1, far: 80 }}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
@@ -237,7 +253,7 @@ export default function App() {
           {selectedAssetsReady && !viewerPaused ? (
             <Scene
               assets={assets}
-              aoQuality={mobileSafariCompat ? 'mobile' : 'desktop'}
+              aoQuality={arPlatform.mobile ? 'mobile' : 'desktop'}
               cameraPosition={cameraPosition}
             />
           ) : null}
@@ -375,6 +391,39 @@ function withVersion(url: string, version: string) {
   return `${url}${separator}v=${encodeURIComponent(version)}`;
 }
 
+function getArLaunchMode(platform: ArPlatform, arReady: boolean | null): ArLaunchMode | null {
+  if (platform.quickLook) {
+    return 'quick-look';
+  }
+
+  if (platform.sceneViewer) {
+    return 'scene-viewer';
+  }
+
+  return arReady === true ? 'webxr' : null;
+}
+
+function createSceneViewerHref(modelUrl: string, title: string) {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const fallbackUrl = new URL(window.location.href);
+  fallbackUrl.hash = '';
+
+  const fileUrl = new URL(modelUrl, fallbackUrl.href);
+  const sceneParams = new URLSearchParams({
+    file: fileUrl.href,
+    mode: 'ar_preferred',
+    resizable: 'false',
+    title,
+  });
+
+  return `intent://arvr.google.com/scene-viewer/1.0?${sceneParams.toString()}#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(
+    fallbackUrl.href,
+  )};end;`;
+}
+
 function ArOpeningOverlay() {
   return (
     <div className="ar-opening" role="status" aria-live="polite">
@@ -437,21 +486,34 @@ function useQuickLookWarmup(enabled: boolean, href: string) {
   }, [enabled, href]);
 }
 
-function useMobileSafariCompatibility() {
-  const [enabled, setEnabled] = useState(false);
+function useArPlatform() {
+  const [platform, setPlatform] = useState<ArPlatform>({
+    quickLook: false,
+    sceneViewer: false,
+    mobile: false,
+  });
 
   useEffect(() => {
+    const navigatorWithUserAgentData = navigator as NavigatorWithUserAgentData;
     const userAgent = navigator.userAgent;
+    const userAgentPlatform = navigatorWithUserAgentData.userAgentData?.platform ?? '';
     const isIOS =
       /iPad|iPhone|iPod/.test(userAgent) ||
+      /iOS|iPadOS/i.test(userAgentPlatform) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isWebKit = /WebKit/i.test(userAgent) && !/CriOS|FxiOS|EdgiOS/i.test(userAgent);
-    const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const isAndroid = /Android/i.test(userAgent) || /Android/i.test(userAgentPlatform);
+    const isWebKit = /WebKit/i.test(userAgent);
+    const isThirdPartyIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(userAgent);
+    const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 
-    setEnabled(isIOS || (isWebKit && isCoarsePointer));
+    setPlatform({
+      quickLook: isIOS && isWebKit && !isThirdPartyIOSBrowser,
+      sceneViewer: isAndroid,
+      mobile: isIOS || isAndroid || isCoarsePointer || navigator.maxTouchPoints > 0,
+    });
   }, []);
 
-  return enabled;
+  return platform;
 }
 
 type ViewerAssets =
@@ -682,30 +744,30 @@ function ModelSwitcher({
 }
 
 function ArButton({
-  arReady,
-  onQuickLookOpen,
+  arLaunchMode,
+  onExternalArOpen,
   quickLookHref,
+  sceneViewerHref,
   onEnterAr,
-  useQuickLook,
 }: {
-  arReady: boolean | null;
-  onQuickLookOpen: () => void;
+  arLaunchMode: ArLaunchMode | null;
+  onExternalArOpen: () => void;
   quickLookHref: string;
+  sceneViewerHref: string;
   onEnterAr: () => void;
-  useQuickLook: boolean;
 }) {
-  if (!useQuickLook && arReady !== true) {
+  if (!arLaunchMode) {
     return null;
   }
 
   return (
     <div className="ar-button-wrap">
-      {useQuickLook ? (
+      {arLaunchMode === 'quick-look' ? (
         <a
           className="ar-button"
           href={quickLookHref}
-          onClick={onQuickLookOpen}
-          onPointerDown={onQuickLookOpen}
+          onClick={onExternalArOpen}
+          onPointerDown={onExternalArOpen}
           rel="ar"
           aria-label="Open in AR"
           title="Apri in AR nella stanza"
@@ -715,6 +777,17 @@ function ArButton({
             className="ar-quicklook-proxy"
             src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
           />
+        </a>
+      ) : arLaunchMode === 'scene-viewer' ? (
+        <a
+          className="ar-button"
+          href={sceneViewerHref}
+          onClick={onExternalArOpen}
+          aria-label="Enter AR"
+          title="Apri in AR"
+        >
+          <Scan size={19} aria-hidden="true" />
+          <span>Visualizza nella tua stanza</span>
         </a>
       ) : (
         <button
