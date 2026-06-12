@@ -137,6 +137,9 @@ export default function App() {
   const quickLookVersion = selectedModel.quickLookVersion ?? QUICK_LOOK_ASSET_VERSION;
   const quickLookAssetHref = withVersion(selectedModel.usdzUrl, quickLookVersion);
   const quickLookHref = `${quickLookAssetHref}#allowsContentScaling=0`;
+  const quickLookFallbackHref = toAbsoluteUrl(selectedModel.usdzUrl);
+  const activeQuickLookHref = arPlatform.quickLookFallback ? quickLookFallbackHref : quickLookHref;
+  const activeQuickLookWarmupHref = arPlatform.quickLookFallback ? quickLookFallbackHref : quickLookAssetHref;
   const sceneViewerHref = createSceneViewerHref(selectedModel.modelUrl, selectedModel.label);
   const arLaunchMode = getArLaunchMode(arPlatform, arReady);
   const viewerPaused = externalArOpening && arPlatform.quickLook;
@@ -147,7 +150,7 @@ export default function App() {
     assets.materialMode === selectedMaterialMode;
 
   usePreloadModelAssets(modelCatalog.models);
-  useQuickLookWarmup(arPlatform.quickLook, quickLookAssetHref);
+  useQuickLookWarmup(arPlatform.quickLook, activeQuickLookWarmupHref);
 
   useEffect(() => {
     let alive = true;
@@ -221,7 +224,7 @@ export default function App() {
         arLaunchMode={arLaunchMode}
         quickLookFallback={arPlatform.quickLookFallback}
         onExternalArOpen={() => setExternalArOpening(true)}
-        quickLookHref={quickLookHref}
+        quickLookHref={activeQuickLookHref}
         sceneViewerHref={sceneViewerHref}
         onEnterAr={enterAr}
       />
@@ -391,6 +394,14 @@ function normalizeModelConfig(data: unknown): ViewerModelConfig | null {
 function withVersion(url: string, version: string) {
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}v=${encodeURIComponent(version)}`;
+}
+
+function toAbsoluteUrl(url: string) {
+  if (typeof window === 'undefined') {
+    return url;
+  }
+
+  return new URL(url, window.location.href).href;
 }
 
 function getArLaunchMode(platform: ArPlatform, arReady: boolean | null): ArLaunchMode | null {
