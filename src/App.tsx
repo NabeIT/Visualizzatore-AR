@@ -27,8 +27,8 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { Text } from '@react-three/drei/core/Text';
 
 const MODEL_CONFIG_URL = import.meta.env.VITE_MODEL_CONFIG_URL || '/viewer-models.json';
-const DEFAULT_MODEL_URL = import.meta.env.VITE_MODEL_URL || '/models/letto-97.glb';
-const DEFAULT_USDZ_MODEL_URL = import.meta.env.VITE_USDZ_MODEL_URL || '/models/letto-97.usdz';
+const DEFAULT_MODEL_URL = import.meta.env.VITE_MODEL_URL || '/models/letto-97-202.glb';
+const DEFAULT_USDZ_MODEL_URL = import.meta.env.VITE_USDZ_MODEL_URL || '/models/letto-97-202.usdz';
 const DEFAULT_WOOD_TEXTURE_URL = import.meta.env.VITE_WOOD_TEXTURE_URL || '/textures/wood.jpg';
 const QUICK_LOOK_ASSET_VERSION = '9';
 const STUDIO_BACKGROUND: [number, number, number] = [1.2, 1.2, 1.2];
@@ -82,8 +82,8 @@ type PreparedViewerAsset = {
 
 const FALLBACK_MODELS: ViewerModelConfig[] = [
   {
-    id: 'letto-97',
-    label: 'Letto 97',
+    id: 'letto-97-202',
+    label: '190 x 80cm',
     modelUrl: DEFAULT_MODEL_URL,
     usdzUrl: DEFAULT_USDZ_MODEL_URL,
     textureUrl: DEFAULT_WOOD_TEXTURE_URL,
