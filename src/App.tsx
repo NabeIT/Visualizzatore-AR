@@ -45,6 +45,7 @@ type ArLaunchMode = 'quick-look' | 'scene-viewer' | 'webxr';
 
 type ArPlatform = {
   quickLook: boolean;
+  quickLookFallback: boolean;
   sceneViewer: boolean;
   mobile: boolean;
 };
@@ -218,6 +219,7 @@ export default function App() {
 
       <ArButton
         arLaunchMode={arLaunchMode}
+        quickLookFallback={arPlatform.quickLookFallback}
         onExternalArOpen={() => setExternalArOpening(true)}
         quickLookHref={quickLookHref}
         sceneViewerHref={sceneViewerHref}
@@ -489,6 +491,7 @@ function useQuickLookWarmup(enabled: boolean, href: string) {
 function useArPlatform() {
   const [platform, setPlatform] = useState<ArPlatform>({
     quickLook: false,
+    quickLookFallback: false,
     sceneViewer: false,
     mobile: false,
   });
@@ -505,9 +508,11 @@ function useArPlatform() {
     const isWebKit = /WebKit/i.test(userAgent);
     const isThirdPartyIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(userAgent);
     const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const supportsQuickLookLink = isIOS && isWebKit;
 
     setPlatform({
-      quickLook: isIOS && isWebKit && !isThirdPartyIOSBrowser,
+      quickLook: supportsQuickLookLink,
+      quickLookFallback: supportsQuickLookLink && isThirdPartyIOSBrowser,
       sceneViewer: isAndroid,
       mobile: isIOS || isAndroid || isCoarsePointer || navigator.maxTouchPoints > 0,
     });
@@ -745,12 +750,14 @@ function ModelSwitcher({
 
 function ArButton({
   arLaunchMode,
+  quickLookFallback,
   onExternalArOpen,
   quickLookHref,
   sceneViewerHref,
   onEnterAr,
 }: {
   arLaunchMode: ArLaunchMode | null;
+  quickLookFallback: boolean;
   onExternalArOpen: () => void;
   quickLookHref: string;
   sceneViewerHref: string;
@@ -770,7 +777,7 @@ function ArButton({
           onPointerDown={onExternalArOpen}
           rel="ar"
           aria-label="Open in AR"
-          title="Apri in AR nella stanza"
+          title={quickLookFallback ? 'Apri modello AR' : 'Apri in AR nella stanza'}
         >
           <img
             alt=""
