@@ -5,7 +5,7 @@
   "models": [
     {
       "id": "earth-190x80",
-      "label": "190 x 80cm",
+      "label": "190x80",
       "modelUrl": "/models/earth/earth-190x80.glb",
       "usdzUrl": "/models/earth/earth-190x80.usdz",
       "textureUrl": "/textures/wood.jpg",
@@ -16,7 +16,7 @@
     },
     {
       "id": "earth-190x120",
-      "label": "190 x 120cm",
+      "label": "190x120",
       "modelUrl": "/models/earth/earth-190x120.glb",
       "usdzUrl": "/models/earth/earth-190x120.usdz",
       "textureUrl": "/textures/wood.jpg",
@@ -27,7 +27,7 @@
     },
     {
       "id": "earth-160x80",
-      "label": "160 x 80cm",
+      "label": "160x80",
       "modelUrl": "/models/earth/earth-160x80.glb",
       "usdzUrl": "/models/earth/earth-160x80.usdz",
       "textureUrl": "/textures/wood.jpg",
