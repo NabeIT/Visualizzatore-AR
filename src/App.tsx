@@ -26,9 +26,11 @@ import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLigh
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Text } from '@react-three/drei/core/Text';
 
-const MODEL_CONFIG_URL = import.meta.env.VITE_MODEL_CONFIG_URL || '/viewer-models.json';
-const DEFAULT_MODEL_URL = import.meta.env.VITE_MODEL_URL || '/models/letto-97-202.glb';
-const DEFAULT_USDZ_MODEL_URL = import.meta.env.VITE_USDZ_MODEL_URL || '/models/letto-97-202.usdz';
+const DEFAULT_BED_MODEL_ID = 'earth';
+const ACTIVE_BED_MODEL_ID = getRequestedBedModelId();
+const MODEL_CONFIG_URL = `/models/${ACTIVE_BED_MODEL_ID}/viewer-models.json`;
+const DEFAULT_MODEL_URL = '/models/earth/earth-190x80.glb';
+const DEFAULT_USDZ_MODEL_URL = '/models/earth/earth-190x80.usdz';
 const DEFAULT_WOOD_TEXTURE_URL = import.meta.env.VITE_WOOD_TEXTURE_URL || '/textures/wood.jpg';
 const QUICK_LOOK_ASSET_VERSION = '9';
 const STUDIO_BACKGROUND: [number, number, number] = [1.2, 1.2, 1.2];
@@ -70,9 +72,22 @@ type ViewerModelConfig = {
 type ViewerMaterialMode = NonNullable<ViewerModelConfig['materialMode']>;
 
 type ViewerModelCatalog = {
+  id: string;
+  title: string;
   defaultModelId?: string;
   models: ViewerModelConfig[];
 };
+
+type LoadedModelCatalog = ViewerModelCatalog & {
+  status: 'ready';
+  selectedModel: ViewerModelConfig;
+  selectModel: (modelId: string) => void;
+};
+
+type ModelCatalogState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | LoadedModelCatalog;
 
 type PreparedViewerAsset = {
   modelUrl: string;
@@ -82,7 +97,7 @@ type PreparedViewerAsset = {
 
 const FALLBACK_MODELS: ViewerModelConfig[] = [
   {
-    id: 'letto-97-202',
+    id: 'earth-190x80',
     label: '190 x 80cm',
     modelUrl: DEFAULT_MODEL_URL,
     usdzUrl: DEFAULT_USDZ_MODEL_URL,
@@ -91,6 +106,13 @@ const FALLBACK_MODELS: ViewerModelConfig[] = [
     materialMode: 'sharedWood',
   },
 ];
+
+const FALLBACK_CATALOG: ViewerModelCatalog = {
+  id: DEFAULT_BED_MODEL_ID,
+  title: 'Letto evolutivo zero+ Earth',
+  defaultModelId: FALLBACK_MODELS[0].id,
+  models: FALLBACK_MODELS,
+};
 
 const preparedAssetCache = new Map<string, Promise<PreparedViewerAsset>>();
 const textureCache = new Map<string, Promise<Texture | null>>();
@@ -122,11 +144,24 @@ class SceneErrorBoundary extends React.Component<
 }
 
 export default function App() {
+  const modelCatalog = useModelCatalog();
+
+  if (modelCatalog.status === 'loading') {
+    return <ViewerStatus message="Caricamento modello..." />;
+  }
+
+  if (modelCatalog.status === 'error') {
+    return <ViewerStatus message={modelCatalog.message} />;
+  }
+
+  return <Viewer modelCatalog={modelCatalog} />;
+}
+
+function Viewer({ modelCatalog }: { modelCatalog: LoadedModelCatalog }) {
   const [arReady, setArReady] = useState<boolean | null>(null);
   const [externalArOpening, setExternalArOpening] = useState(false);
   const [xrError, setXrError] = useState('');
   const arPlatform = useArPlatform();
-  const modelCatalog = useModelCatalog();
   const selectedModel = modelCatalog.selectedModel;
   const selectedMaterialMode = selectedModel.materialMode ?? 'sharedWood';
   const assets = useViewerAssets(
@@ -151,6 +186,10 @@ export default function App() {
 
   usePreloadModelAssets(modelCatalog.models);
   useQuickLookWarmup(arPlatform.quickLook, activeQuickLookWarmupHref);
+
+  useEffect(() => {
+    document.title = modelCatalog.title;
+  }, [modelCatalog.title]);
 
   useEffect(() => {
     let alive = true;
@@ -216,8 +255,8 @@ export default function App() {
 
   return (
     <main className="viewer-shell">
-      <div className="viewer-title" aria-label="Letto evolutivo zero+ Earth">
-        Letto evolutivo zero+ Earth
+      <div className="viewer-title" aria-label={modelCatalog.title}>
+        {modelCatalog.title}
       </div>
 
       <ArButton
@@ -264,18 +303,22 @@ export default function App() {
           ) : null}
         </XR>
       </Canvas>
-
-      {/* <FpsBox active={!viewerPaused} /> */}
     </main>
   );
 }
 
-function useModelCatalog() {
-  const [catalog, setCatalog] = useState<ViewerModelCatalog>({
-    defaultModelId: FALLBACK_MODELS[0].id,
-    models: FALLBACK_MODELS,
-  });
-  const [selectedModelId, setSelectedModelId] = useState(FALLBACK_MODELS[0].id);
+function ViewerStatus({ message }: { message: string }) {
+  return (
+    <main className="viewer-shell viewer-status" role="status">
+      {message}
+    </main>
+  );
+}
+
+function useModelCatalog(): ModelCatalogState {
+  const [catalog, setCatalog] = useState<ViewerModelCatalog | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -295,15 +338,26 @@ function useModelCatalog() {
 
         const nextCatalog = normalizeModelCatalog(data);
         setCatalog(nextCatalog);
+        setLoadError('');
         setSelectedModelId((currentModelId) => {
           const hasCurrentModel = nextCatalog.models.some((model) => model.id === currentModelId);
           return hasCurrentModel ? currentModelId : nextCatalog.defaultModelId ?? nextCatalog.models[0].id;
         });
       })
       .catch((error) => {
-        if (active) {
-          console.warn('Model config failed, using fallback model', error);
+        if (!active) {
+          return;
         }
+
+        if (ACTIVE_BED_MODEL_ID === DEFAULT_BED_MODEL_ID) {
+          console.warn('Earth model config failed, using fallback model', error);
+          setCatalog(FALLBACK_CATALOG);
+          setSelectedModelId(FALLBACK_CATALOG.defaultModelId ?? FALLBACK_MODELS[0].id);
+          return;
+        }
+
+        console.error(`Model config failed: ${ACTIVE_BED_MODEL_ID}`, error);
+        setLoadError(`Modello letto “${ACTIVE_BED_MODEL_ID}” non disponibile`);
       });
 
     return () => {
@@ -312,26 +366,36 @@ function useModelCatalog() {
   }, []);
 
   return useMemo(() => {
+    if (!catalog) {
+      return loadError
+        ? { status: 'error' as const, message: loadError }
+        : { status: 'loading' as const };
+    }
+
     const selectedModel =
       catalog.models.find((model) => model.id === selectedModelId) ?? catalog.models[0];
 
     return {
+      status: 'ready' as const,
+      ...catalog,
       models: catalog.models,
       selectedModel,
       selectModel: setSelectedModelId,
     };
-  }, [catalog, selectedModelId]);
+  }, [catalog, loadError, selectedModelId]);
 }
 
 function normalizeModelCatalog(data: unknown): ViewerModelCatalog {
   if (!data || typeof data !== 'object') {
-    return {
-      defaultModelId: FALLBACK_MODELS[0].id,
-      models: FALLBACK_MODELS,
-    };
+    throw new Error('Invalid model catalog');
   }
 
-  const value = data as { defaultModelId?: unknown; models?: unknown };
+  const value = data as {
+    id?: unknown;
+    title?: unknown;
+    defaultModelId?: unknown;
+    models?: unknown;
+  };
   const models = Array.isArray(value.models)
     ? value.models.flatMap((model) => {
       const normalizedModel = normalizeModelConfig(model);
@@ -340,11 +404,19 @@ function normalizeModelCatalog(data: unknown): ViewerModelCatalog {
     : [];
 
   if (models.length === 0) {
-    return {
-      defaultModelId: FALLBACK_MODELS[0].id,
-      models: FALLBACK_MODELS,
-    };
+    throw new Error('Model catalog has no valid variants');
   }
+
+  const id = typeof value.id === 'string' && value.id ? value.id : ACTIVE_BED_MODEL_ID;
+
+  if (id !== ACTIVE_BED_MODEL_ID) {
+    throw new Error(`Unexpected model catalog: ${id}`);
+  }
+
+  const title =
+    typeof value.title === 'string' && value.title
+      ? value.title
+      : `Letto evolutivo zero+ ${formatBedModelName(id)}`;
 
   const defaultModelId =
     typeof value.defaultModelId === 'string' && models.some((model) => model.id === value.defaultModelId)
@@ -352,9 +424,27 @@ function normalizeModelCatalog(data: unknown): ViewerModelCatalog {
       : models[0].id;
 
   return {
+    id,
+    title,
     defaultModelId,
     models,
   };
+}
+
+function getRequestedBedModelId() {
+  if (typeof window === 'undefined') {
+    return DEFAULT_BED_MODEL_ID;
+  }
+
+  const requestedModel = new URLSearchParams(window.location.search).get('model')?.trim().toLowerCase();
+
+  return requestedModel && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requestedModel)
+    ? requestedModel
+    : DEFAULT_BED_MODEL_ID;
+}
+
+function formatBedModelName(modelId: string) {
+  return modelId.charAt(0).toUpperCase() + modelId.slice(1);
 }
 
 function normalizeModelConfig(data: unknown): ViewerModelConfig | null {
@@ -675,56 +765,6 @@ function loadWoodTexture(textureUrl: string) {
   return texturePromise;
 }
 
-function FpsBox({ active }: { active: boolean }) {
-  const [stats, setStats] = useState({ fps: 0, frameMs: 0 });
-
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-
-    let animationFrame = 0;
-    let frameCount = 0;
-    let lastSample = performance.now();
-    let lastFrame = lastSample;
-    let smoothedFrameMs = 0;
-
-    const tick = (now: number) => {
-      const frameMs = now - lastFrame;
-      lastFrame = now;
-      frameCount += 1;
-      smoothedFrameMs = smoothedFrameMs === 0 ? frameMs : smoothedFrameMs * 0.9 + frameMs * 0.1;
-
-      const elapsed = now - lastSample;
-
-      if (elapsed >= 250) {
-        setStats({
-          fps: Math.round((frameCount * 1000) / elapsed),
-          frameMs: Math.round(smoothedFrameMs * 10) / 10,
-        });
-        frameCount = 0;
-        lastSample = now;
-      }
-
-      animationFrame = requestAnimationFrame(tick);
-    };
-
-    animationFrame = requestAnimationFrame(tick);
-
-    return () => {
-      cancelAnimationFrame(animationFrame);
-    };
-  }, [active]);
-
-  return (
-    <div className="fps-box" aria-label={`FPS ${stats.fps}`}>
-      <span>FPS</span>
-      <strong>{stats.fps}</strong>
-      <small>{stats.frameMs.toFixed(1)} ms</small>
-    </div>
-  );
-}
-
 function ModelSwitcher({
   models,
   selectedModelId,
@@ -739,7 +779,7 @@ function ModelSwitcher({
   }
 
   return (
-    <div className="model-switcher" role="group" aria-label="Selezione modello">
+    <div className="model-switcher" role="group" aria-label="Selezione misura">
       {models.map((model) => {
         const selected = model.id === selectedModelId;
 

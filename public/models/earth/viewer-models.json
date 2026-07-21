@@ -1,11 +1,13 @@
 {
-  "defaultModelId": "letto-97-202",
+  "id": "earth",
+  "title": "Letto evolutivo zero+ Earth",
+  "defaultModelId": "earth-190x80",
   "models": [
     {
-      "id": "letto-97-202",
+      "id": "earth-190x80",
       "label": "190 x 80cm",
-      "modelUrl": "/models/letto-97-202.glb",
-      "usdzUrl": "/models/letto-97-202.usdz",
+      "modelUrl": "/models/earth/earth-190x80.glb",
+      "usdzUrl": "/models/earth/earth-190x80.usdz",
       "textureUrl": "/textures/wood.jpg",
       "quickLookVersion": "11",
       "materialMode": "sharedWood",
@@ -13,10 +15,10 @@
       "arTextureLift": 0.035
     },
     {
-      "id": "letto-125",
+      "id": "earth-190x120",
       "label": "190 x 120cm",
-      "modelUrl": "/models/letto-125.glb",
-      "usdzUrl": "/models/letto-125.usdz",
+      "modelUrl": "/models/earth/earth-190x120.glb",
+      "usdzUrl": "/models/earth/earth-190x120.usdz",
       "textureUrl": "/textures/wood.jpg",
       "quickLookVersion": "11",
       "materialMode": "sharedWood",
@@ -24,10 +26,10 @@
       "arTextureLift": 0.035
     },
     {
-      "id": "letto-97",
+      "id": "earth-160x80",
       "label": "160 x 80cm",
-      "modelUrl": "/models/letto-97.glb",
-      "usdzUrl": "/models/letto-97.usdz",
+      "modelUrl": "/models/earth/earth-160x80.glb",
+      "usdzUrl": "/models/earth/earth-160x80.usdz",
       "textureUrl": "/textures/wood.jpg",
       "quickLookVersion": "11",
       "materialMode": "sharedWood",

@@ -1,0 +1,40 @@
+{
+  "id": "dream",
+  "title": "Letto evolutivo zero+ Dream",
+  "defaultModelId": "dream-190x80",
+  "models": [
+    {
+      "id": "dream-190x80",
+      "label": "190 x 80cm",
+      "modelUrl": "/models/dream/190x80.glb",
+      "usdzUrl": "/models/dream/190x80.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "2",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    },
+    {
+      "id": "dream-200x90",
+      "label": "200 x 90cm",
+      "modelUrl": "/models/dream/200x90.glb",
+      "usdzUrl": "/models/dream/200x90.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "2",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    },
+    {
+      "id": "dream-200x120",
+      "label": "200 x 120cm",
+      "modelUrl": "/models/dream/200x120.glb",
+      "usdzUrl": "/models/dream/200x120.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "2",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    }
+  ]
+}

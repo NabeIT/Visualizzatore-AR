@@ -1,38 +1,55 @@
 # VR Viewer
 
-React + React Three Fiber + WebXR viewer for one GLTF/GLB model.
+Viewer React + React Three Fiber + WebXR per i letti Nabe.
 
-## Start
+## Avvio
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Model
+## Selezione del letto
 
-Default model path:
+Il letto viene scelto una sola volta al caricamento tramite il parametro GET `model`:
 
 ```text
-public/models/letto-completo.glb
+/?model=earth
 ```
 
-You can also set a custom path in `.env.local`:
+Se il parametro manca o ha un formato non valido, il viewer usa `earth`. Se invece il nome è valido ma il relativo catalogo non esiste, il viewer segnala che il letto non è disponibile. Ogni URL carica un solo catalogo letto; il selettore nel viewer mostra esclusivamente le varianti di misura presenti in quel catalogo.
+
+## Struttura dei modelli
+
+Ogni letto ha una cartella dedicata sotto `public/models`:
+
+```text
+public/models/
+└── earth/
+    ├── viewer-models.json
+    ├── earth-160x80.glb
+    ├── earth-160x80.usdz
+    ├── earth-190x80.glb
+    ├── earth-190x80.usdz
+    ├── earth-190x120.glb
+    └── earth-190x120.usdz
+```
+
+Per aggiungere Dream, creare `public/models/dream/viewer-models.json` e inserire nella stessa cartella i relativi file GLB e USDZ. Sarà poi disponibile con:
+
+```text
+/?model=dream
+```
+
+Il catalogo deve contenere un `id`, un `title`, un `defaultModelId` e l'elenco `models` delle varianti di misura.
+
+## Texture ed export USDZ
+
+La texture legno condivisa è `public/textures/wood.jpg`. È possibile sostituirne l'URL tramite `VITE_WOOD_TEXTURE_URL`.
+
+Per rigenerare tutti gli USDZ del catalogo Earth con Blender:
 
 ```bash
-VITE_MODEL_URL=/models/my-model.gltf
-```
-
-For `.gltf` files with external textures or `.bin` files, keep the referenced files in the same public folder structure.
-
-The viewer also loads the wood texture from:
-
-```text
-public/textures/wood.jpg
-```
-
-iPhone/iPad AR uses Apple Quick Look:
-
-```text
-public/models/letto-completo.usdz
+blender --background --python scripts/export_bed_usdz.py -- \
+  --catalog public/models/earth/viewer-models.json
 ```

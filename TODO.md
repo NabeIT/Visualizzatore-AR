@@ -1,0 +1,1 @@
+- progetto ar nabe -> mettere un check che se sente di essere dentro una webview (ad es instagram) chiede di aprire con il browser

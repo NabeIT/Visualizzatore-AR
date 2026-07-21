@@ -4,6 +4,7 @@ dist
 *.tsbuildinfo
 .env
 .env.local
+public/textures/*-ar-*.jpg
 vite.config.d.ts
 vite.config.js
 npm-debug.log*

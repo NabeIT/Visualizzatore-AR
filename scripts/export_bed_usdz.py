@@ -18,6 +18,14 @@ AR_TEXTURE_LIFT = 0.035
 DEFAULT_TEXTURE_PATH = Path("public/textures/wood.jpg")
 
 
+def find_public_root(path):
+    for parent in path.parents:
+        if parent.name == "public":
+            return parent
+
+    raise ValueError(f"Catalog must be inside the public directory: {path}")
+
+
 def read_glb_json(path):
     data = Path(path).read_bytes()
     if data[:4] != b"glTF":
@@ -269,7 +277,7 @@ def main():
 
 
 def export_catalog(catalog_path):
-    public_root = catalog_path.parent
+    public_root = find_public_root(catalog_path)
     catalog = json.loads(catalog_path.read_text())
 
     for model in catalog.get("models", []):
