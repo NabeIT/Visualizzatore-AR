@@ -91,8 +91,7 @@ a {
   z-index: 5;
   left: 50%;
   bottom: var(--model-control-bottom);
-  display: inline-flex;
-  gap: 6px;
+  width: max-content;
   max-width: calc(100vw - 32px);
   border: 1px solid rgba(16, 24, 30, 0.12);
   border-radius: 16px;
@@ -100,11 +99,38 @@ a {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.14);
   backdrop-filter: blur(14px);
-  overflow-x: auto;
+  overflow: hidden;
   transform: translateX(-50%);
 }
 
+.model-switcher-scroll {
+  display: flex;
+  gap: 10px;
+  max-width: 100%;
+  padding: 0 1px 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-color: #79aea2 transparent;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+  touch-action: pan-x;
+}
+
+.model-switcher-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.model-switcher-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.model-switcher-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #79aea2;
+}
+
 .model-switcher-button {
+  flex: 0 0 auto;
   min-width: 84px;
   height: 38px;
   border: 0;
@@ -116,6 +142,7 @@ a {
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
+  scroll-snap-align: start;
   cursor: pointer;
   transition:
     background 160ms ease,
@@ -141,6 +168,43 @@ a {
   color: #102026;
   background: #79aea2;
   box-shadow: 0 8px 22px rgba(49, 153, 141, 0.24);
+}
+
+.model-switcher-scroll-button {
+  position: absolute;
+  z-index: 1;
+  top: 5px;
+  bottom: 9px;
+  display: grid;
+  width: 42px;
+  border: 0;
+  padding: 0;
+  color: #102026;
+  place-items: center;
+  cursor: pointer;
+}
+
+.model-switcher-scroll-button svg {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  padding: 2px;
+  background: rgba(121, 174, 162, 0.28);
+}
+
+.model-switcher-scroll-button--left {
+  left: 5px;
+  background: linear-gradient(90deg, #ffffff 58%, rgba(255, 255, 255, 0));
+}
+
+.model-switcher-scroll-button--right {
+  right: 5px;
+  background: linear-gradient(270deg, #ffffff 58%, rgba(255, 255, 255, 0));
+}
+
+.model-switcher-scroll-button:focus-visible {
+  outline: 2px solid #79aea2;
+  outline-offset: -2px;
 }
 
 .ar-button-wrap {

@@ -12,7 +12,7 @@ import {
   TextureLoader,
   Vector3,
 } from 'three';
-import { Scan } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Scan } from 'lucide-react';
 import type { BufferGeometry, Mesh, Object3D, Texture } from 'three';
 import { Canvas, useThree } from '@react-three/fiber';
 import React, { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -774,27 +774,98 @@ function ModelSwitcher({
   selectedModelId: string;
   onSelect: (modelId: string) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollControls = () => {
+    const scrollContainer = scrollRef.current;
+
+    if (!scrollContainer) {
+      return;
+    }
+
+    const maxScrollLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+    setCanScrollLeft(scrollContainer.scrollLeft > 2);
+    setCanScrollRight(scrollContainer.scrollLeft < maxScrollLeft - 2);
+  };
+
+  useLayoutEffect(() => {
+    const scrollContainer = scrollRef.current;
+
+    if (!scrollContainer) {
+      return;
+    }
+
+    updateScrollControls();
+    const resizeObserver = new ResizeObserver(updateScrollControls);
+    resizeObserver.observe(scrollContainer);
+
+    return () => resizeObserver.disconnect();
+  }, [models]);
+
+  useEffect(() => {
+    const selectedButton = scrollRef.current?.querySelector<HTMLButtonElement>(
+      '.model-switcher-button[aria-pressed="true"]',
+    );
+
+    selectedButton?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  }, [selectedModelId]);
+
   if (models.length <= 1) {
     return null;
   }
 
+  const scroll = (direction: -1 | 1) => {
+    const scrollContainer = scrollRef.current;
+
+    scrollContainer?.scrollBy({
+      left: direction * scrollContainer.clientWidth * 0.7,
+      behavior: 'smooth',
+    });
+  };
+
   return (
     <div className="model-switcher" role="group" aria-label="Selezione misura">
-      {models.map((model) => {
-        const selected = model.id === selectedModelId;
+      {canScrollLeft ? (
+        <button
+          className="model-switcher-scroll-button model-switcher-scroll-button--left"
+          type="button"
+          aria-label="Mostra le misure precedenti"
+          onClick={() => scroll(-1)}
+        >
+          <ChevronLeft aria-hidden="true" />
+        </button>
+      ) : null}
 
-        return (
-          <button
-            key={model.id}
-            className="model-switcher-button"
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onSelect(model.id)}
-          >
-            {model.label}
-          </button>
-        );
-      })}
+      <div ref={scrollRef} className="model-switcher-scroll" onScroll={updateScrollControls}>
+        {models.map((model) => {
+          const selected = model.id === selectedModelId;
+
+          return (
+            <button
+              key={model.id}
+              className="model-switcher-button"
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onSelect(model.id)}
+            >
+              {model.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {canScrollRight ? (
+        <button
+          className="model-switcher-scroll-button model-switcher-scroll-button--right"
+          type="button"
+          aria-label="Mostra altre misure"
+          onClick={() => scroll(1)}
+        >
+          <ChevronRight aria-hidden="true" />
+        </button>
+      ) : null}
     </div>
   );
 }

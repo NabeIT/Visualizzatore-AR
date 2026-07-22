@@ -5,7 +5,7 @@
   "models": [
     {
       "id": "fun-190x80",
-      "label": "190 x 80cm",
+      "label": "190x80",
       "modelUrl": "/models/fun/190x80.glb",
       "usdzUrl": "/models/fun/190x80.usdz",
       "textureUrl": "/textures/wood.jpg",
@@ -15,30 +15,8 @@
       "arTextureLift": 0.035
     },
     {
-      "id": "fun-190x120",
-      "label": "190 x 120cm",
-      "modelUrl": "/models/fun/190x120.glb",
-      "usdzUrl": "/models/fun/190x120.usdz",
-      "textureUrl": "/textures/wood.jpg",
-      "quickLookVersion": "3",
-      "materialMode": "sharedWood",
-      "arTextureBrightness": 1.18,
-      "arTextureLift": 0.035
-    },
-    {
-      "id": "fun-160x80",
-      "label": "160 x 80cm",
-      "modelUrl": "/models/fun/160x80.glb",
-      "usdzUrl": "/models/fun/160x80.usdz",
-      "textureUrl": "/textures/wood.jpg",
-      "quickLookVersion": "3",
-      "materialMode": "sharedWood",
-      "arTextureBrightness": 1.18,
-      "arTextureLift": 0.035
-    },
-    {
       "id": "fun-200x90",
-      "label": "200 x 90cm",
+      "label": "200x90",
       "modelUrl": "/models/fun/200x90.glb",
       "usdzUrl": "/models/fun/200x90.usdz",
       "textureUrl": "/textures/wood.jpg",
@@ -48,10 +26,32 @@
       "arTextureLift": 0.035
     },
     {
+      "id": "fun-190x120",
+      "label": "190x120",
+      "modelUrl": "/models/fun/190x120.glb",
+      "usdzUrl": "/models/fun/190x120.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "3",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    },
+    {
       "id": "fun-200x120",
-      "label": "200 x 120cm",
+      "label": "200x120",
       "modelUrl": "/models/fun/200x120.glb",
       "usdzUrl": "/models/fun/200x120.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "3",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    },
+    {
+      "id": "fun-160x80",
+      "label": "160x80",
+      "modelUrl": "/models/fun/160x80.glb",
+      "usdzUrl": "/models/fun/160x80.usdz",
       "textureUrl": "/textures/wood.jpg",
       "quickLookVersion": "3",
       "materialMode": "sharedWood",
