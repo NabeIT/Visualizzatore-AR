@@ -47,7 +47,29 @@ Il catalogo deve contenere un `id`, un `title`, un `defaultModelId` e l'elenco `
 
 La texture legno condivisa è `public/textures/wood.jpg`. È possibile sostituirne l'URL tramite `VITE_WOOD_TEXTURE_URL`.
 
-Per rigenerare tutti gli USDZ del catalogo Earth con Blender:
+Per ottimizzare tutti i GLB di un modello con Draco e WebP:
+
+```bash
+pnpm optimize fun
+```
+
+I file già ottimizzati vengono saltati. Per rigenerarli comunque:
+
+```bash
+pnpm optimize fun --force
+```
+
+Per creare o rigenerare tutti gli USDZ di un modello con Blender:
+
+```bash
+pnpm usdz fun
+```
+
+Il comando usa `public/models/<nome>/viewer-models.json`; se il catalogo non esiste lo crea dai GLB presenti nella cartella con il materiale `sharedWood`. Dopo un export riuscito incrementa automaticamente `quickLookVersion` per invalidare la cache di Apple Quick Look.
+
+Blender viene cercato in `/Applications/Blender.app` su macOS e poi nel `PATH`. È possibile indicare un percorso diverso con `BLENDER_BIN`.
+
+La chiamata Blender equivalente, utile per debugging, è:
 
 ```bash
 blender --background --python scripts/export_bed_usdz.py -- \
