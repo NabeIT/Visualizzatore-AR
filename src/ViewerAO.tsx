@@ -40,7 +40,7 @@ const AO_SETTINGS: Record<
 export default function ViewerAO({ quality }: { quality: ViewerAOQuality }) {
   const isInXR = useXR((state) => Boolean(state.session));
   const settings = AO_SETTINGS[quality];
-
+  return null;
   if (isInXR) {
     return null;
   }

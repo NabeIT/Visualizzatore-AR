@@ -1,0 +1,18 @@
+{
+  "id": "family",
+  "title": "Letto evolutivo zero+ Family",
+  "defaultModelId": "family-190x160",
+  "models": [
+    {
+      "id": "family-190x160",
+      "label": "190x160",
+      "modelUrl": "/models/family/190x160.glb",
+      "usdzUrl": "/models/family/190x160.usdz",
+      "textureUrl": "/textures/wood.jpg",
+      "quickLookVersion": "5",
+      "materialMode": "original",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    }
+  ]
+}
