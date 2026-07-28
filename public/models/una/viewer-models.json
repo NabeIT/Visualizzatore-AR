@@ -1,0 +1,18 @@
+{
+  "id": "una",
+  "title": "Culla evolutiva zero+ Una",
+  "defaultModelId": "una",
+  "models": [
+    {
+      "id": "una",
+      "label": "Una",
+      "modelUrl": "/models/una/una.glb",
+      "usdzUrl": "/models/una/una.usdz",
+      "textureUrl": "/textures/abete.png",
+      "quickLookVersion": "5",
+      "materialMode": "sharedWood",
+      "arTextureBrightness": 1.18,
+      "arTextureLift": 0.035
+    }
+  ]
+}

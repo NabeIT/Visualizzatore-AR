@@ -8,9 +8,9 @@
       "label": "190x160",
       "modelUrl": "/models/family/190x160.glb",
       "usdzUrl": "/models/family/190x160.usdz",
-      "textureUrl": "/textures/wood.jpg",
+      "textureUrl": "/textures/abete.png",
       "quickLookVersion": "6",
-      "materialMode": "original",
+      "materialMode": "sharedWood",
       "arTextureBrightness": 1.18,
       "arTextureLift": 0.035
     }

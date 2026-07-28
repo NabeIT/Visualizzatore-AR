@@ -1,0 +1,62 @@
+{
+  "id": "up",
+  "title": "Letto evolutivo zero+ Up",
+  "defaultModelId": "up-190X80",
+  "models": [
+    {
+      "id": "up-190X80",
+      "label": "190X80",
+      "modelUrl": "/models/up/190X80.glb",
+      "usdzUrl": "/models/up/190X80.usdz",
+      "teXtureUrl": "/teXtures/abete.png",
+      "quickLookVersion": "6",
+      "materialMode": "sharedWood",
+      "arTeXtureBrightness": 1.18,
+      "arTeXtureLift": 0.035
+    },
+    {
+      "id": "up-200X90",
+      "label": "200X90",
+      "modelUrl": "/models/up/200X90.glb",
+      "usdzUrl": "/models/up/200X90.usdz",
+      "teXtureUrl": "/teXtures/abete.png",
+      "quickLookVersion": "6",
+      "materialMode": "sharedWood",
+      "arTeXtureBrightness": 1.18,
+      "arTeXtureLift": 0.035
+    },
+    {
+      "id": "up-190X120",
+      "label": "190X120",
+      "modelUrl": "/models/up/190X120.glb",
+      "usdzUrl": "/models/up/190X120.usdz",
+      "teXtureUrl": "/teXtures/abete.png",
+      "quickLookVersion": "6",
+      "materialMode": "sharedWood",
+      "arTeXtureBrightness": 1.18,
+      "arTeXtureLift": 0.035
+    },
+    {
+      "id": "up-200X120",
+      "label": "200X120",
+      "modelUrl": "/models/up/200X120.glb",
+      "usdzUrl": "/models/up/200X120.usdz",
+      "teXtureUrl": "/teXtures/abete.png",
+      "quickLookVersion": "6",
+      "materialMode": "sharedWood",
+      "arTeXtureBrightness": 1.18,
+      "arTeXtureLift": 0.035
+    },
+    {
+      "id": "up-160X80",
+      "label": "160X80",
+      "modelUrl": "/models/up/160X80.glb",
+      "usdzUrl": "/models/up/160X80.usdz",
+      "teXtureUrl": "/teXtures/abete.png",
+      "quickLookVersion": "6",
+      "materialMode": "sharedWood",
+      "arTeXtureBrightness": 1.18,
+      "arTeXtureLift": 0.035
+    }
+  ]
+}

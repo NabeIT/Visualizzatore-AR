@@ -45,7 +45,7 @@ Il catalogo deve contenere un `id`, un `title`, un `defaultModelId` e l'elenco `
 
 ## Texture ed export USDZ
 
-La texture legno condivisa è `public/textures/wood.jpg`. È possibile sostituirne l'URL tramite `VITE_WOOD_TEXTURE_URL`.
+La texture legno condivisa è `public/textures/abete.png`. È possibile sostituirne l'URL tramite `VITE_WOOD_TEXTURE_URL`.
 
 Per ottimizzare tutti i GLB di un modello con Draco e WebP:
 

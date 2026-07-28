@@ -15,7 +15,7 @@ WOOD_U_REPEAT = 2.0
 WOOD_V_REPEAT = 6.0
 AR_TEXTURE_BRIGHTNESS = 1.18
 AR_TEXTURE_LIFT = 0.035
-DEFAULT_TEXTURE_PATH = Path("public/textures/wood.jpg")
+DEFAULT_TEXTURE_PATH = Path("textures/abete.png")
 
 
 def find_public_root(path):

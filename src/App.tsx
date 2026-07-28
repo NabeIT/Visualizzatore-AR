@@ -31,7 +31,7 @@ const ACTIVE_BED_MODEL_ID = getRequestedBedModelId();
 const MODEL_CONFIG_URL = `/models/${ACTIVE_BED_MODEL_ID}/viewer-models.json`;
 const DEFAULT_MODEL_URL = '/models/earth/earth-190x80.glb';
 const DEFAULT_USDZ_MODEL_URL = '/models/earth/earth-190x80.usdz';
-const DEFAULT_WOOD_TEXTURE_URL = import.meta.env.VITE_WOOD_TEXTURE_URL || '/textures/wood.jpg';
+const DEFAULT_WOOD_TEXTURE_URL = import.meta.env.VITE_WOOD_TEXTURE_URL || '/textures/abete.png';
 const QUICK_LOOK_ASSET_VERSION = '9';
 const STUDIO_BACKGROUND: [number, number, number] = [1.2, 1.2, 1.2];
 const DESKTOP_CAMERA_POSITION: [number, number, number] = [2.55, 1.15, 2.9];
@@ -1348,7 +1348,7 @@ function prepareLoadedModel(
     mesh.receiveShadow = true;
 
     if (woodMaterial) {
-      mesh.geometry = ensureBoxUv(mesh.geometry);
+      // mesh.geometry = ensureBoxUv(mesh.geometry);
       mesh.material = woodMaterial;
     }
   });
@@ -1360,10 +1360,10 @@ function isHelperBoundsMesh(mesh: Mesh) {
 }
 
 function prepareWoodTexture(texture: Texture) {
-  const repeatCount = 2;
+  const repeatCount = 8;
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
-  texture.repeat.set(repeatCount, repeatCount * 3);
+  texture.repeat.set(repeatCount, repeatCount);
   texture.colorSpace = SRGBColorSpace;
   texture.needsUpdate = true;
 }
