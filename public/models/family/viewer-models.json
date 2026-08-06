@@ -9,7 +9,7 @@
       "modelUrl": "/models/family/190x160.glb",
       "usdzUrl": "/models/family/190x160.usdz",
       "textureUrl": "/textures/abete.png",
-      "quickLookVersion": "6",
+      "quickLookVersion": "12",
       "materialMode": "sharedWood",
       "arTextureBrightness": 1.18,
       "arTextureLift": 0.035

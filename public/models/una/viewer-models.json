@@ -9,9 +9,9 @@
       "modelUrl": "/models/una/una.glb",
       "usdzUrl": "/models/una/una.usdz",
       "textureUrl": "/textures/abete.png",
-      "quickLookVersion": "5",
-      "materialMode": "sharedWood",
-      "arTextureBrightness": 1.18,
+      "quickLookVersion": "6",
+      "materialMode": "original",
+      "arTextureBrightness": 10.18,
       "arTextureLift": 0.035
     }
   ]

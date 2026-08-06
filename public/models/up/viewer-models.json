@@ -9,7 +9,7 @@
       "modelUrl": "/models/up/190X80.glb",
       "usdzUrl": "/models/up/190X80.usdz",
       "teXtureUrl": "/teXtures/abete.png",
-      "quickLookVersion": "6",
+      "quickLookVersion": "12",
       "materialMode": "sharedWood",
       "arTeXtureBrightness": 1.18,
       "arTeXtureLift": 0.035
@@ -20,7 +20,7 @@
       "modelUrl": "/models/up/200X90.glb",
       "usdzUrl": "/models/up/200X90.usdz",
       "teXtureUrl": "/teXtures/abete.png",
-      "quickLookVersion": "6",
+      "quickLookVersion": "12",
       "materialMode": "sharedWood",
       "arTeXtureBrightness": 1.18,
       "arTeXtureLift": 0.035
@@ -31,7 +31,7 @@
       "modelUrl": "/models/up/190X120.glb",
       "usdzUrl": "/models/up/190X120.usdz",
       "teXtureUrl": "/teXtures/abete.png",
-      "quickLookVersion": "6",
+      "quickLookVersion": "12",
       "materialMode": "sharedWood",
       "arTeXtureBrightness": 1.18,
       "arTeXtureLift": 0.035
@@ -42,7 +42,7 @@
       "modelUrl": "/models/up/200X120.glb",
       "usdzUrl": "/models/up/200X120.usdz",
       "teXtureUrl": "/teXtures/abete.png",
-      "quickLookVersion": "6",
+      "quickLookVersion": "12",
       "materialMode": "sharedWood",
       "arTeXtureBrightness": 1.18,
       "arTeXtureLift": 0.035
@@ -53,7 +53,7 @@
       "modelUrl": "/models/up/160X80.glb",
       "usdzUrl": "/models/up/160X80.usdz",
       "teXtureUrl": "/teXtures/abete.png",
-      "quickLookVersion": "6",
+      "quickLookVersion": "12",
       "materialMode": "sharedWood",
       "arTeXtureBrightness": 1.18,
       "arTeXtureLift": 0.035

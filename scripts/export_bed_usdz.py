@@ -4,6 +4,7 @@ import json
 import math
 import struct
 import sys
+import tempfile
 from pathlib import Path
 
 import bpy
@@ -185,6 +186,135 @@ def make_single_material(objects, material):
             polygon.material_index = 0
 
 
+def find_material_image_node(material):
+    if not material.use_nodes or not material.node_tree:
+        return None
+
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+    output = next(
+        (node for node in nodes if node.type == "OUTPUT_MATERIAL" and node.is_active_output),
+        None,
+    )
+
+    if output:
+        surface = output.inputs.get("Surface")
+        pending = [link.from_node for link in surface.links] if surface else []
+        visited = set()
+
+        while pending:
+            node = pending.pop(0)
+            if node in visited:
+                continue
+            visited.add(node)
+
+            if node.type == "TEX_IMAGE" and node.image:
+                return node
+
+            pending.extend(link.from_node for link in links if link.to_node == node)
+
+    return next(
+        (node for node in nodes if node.type == "TEX_IMAGE" and node.image),
+        None,
+    )
+
+
+def has_usdz_compatible_surface(material):
+    if not material.use_nodes or not material.node_tree:
+        return False
+
+    output = next(
+        (
+            node
+            for node in material.node_tree.nodes
+            if node.type == "OUTPUT_MATERIAL" and node.is_active_output
+        ),
+        None,
+    )
+    surface = output.inputs.get("Surface") if output else None
+    return bool(
+        surface
+        and surface.is_linked
+        and surface.links[0].from_node.type == "BSDF_PRINCIPLED"
+    )
+
+
+def copy_image_as_png(source, texture_directory):
+    width, height = source.size
+    image = bpy.data.images.new(
+        f"{source.name} USDZ",
+        width=width,
+        height=height,
+        alpha=True,
+    )
+    image.colorspace_settings.name = source.colorspace_settings.name
+    image.pixels.foreach_set(source.pixels[:])
+    image.filepath_raw = str(texture_directory / f"{Path(source.name).stem}.png")
+    image.file_format = "PNG"
+    image.save()
+    return image
+
+
+def make_original_materials_usdz_compatible(objects, texture_directory):
+    materials = {
+        slot.material
+        for obj in objects
+        for slot in obj.material_slots
+        if slot.material
+    }
+    converted = 0
+
+    for material in materials:
+        if has_usdz_compatible_surface(material):
+            continue
+
+        source_texture = find_material_image_node(material)
+        if not source_texture:
+            print(f"Warning: no image texture found in original material {material.name}")
+            continue
+
+        image = copy_image_as_png(source_texture.image, texture_directory)
+        extension = source_texture.extension
+        interpolation = source_texture.interpolation
+        projection = source_texture.projection
+
+        material.use_nodes = True
+        nodes = material.node_tree.nodes
+        links = material.node_tree.links
+        nodes.clear()
+
+        output = nodes.new(type="ShaderNodeOutputMaterial")
+        output.location = (420, 0)
+
+        bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
+        bsdf.location = (80, 0)
+        if "Base Color" in bsdf.inputs:
+            bsdf.inputs["Base Color"].default_value = (0.0, 0.0, 0.0, 1.0)
+        if "Metallic" in bsdf.inputs:
+            bsdf.inputs["Metallic"].default_value = 0.0
+        if "Roughness" in bsdf.inputs:
+            bsdf.inputs["Roughness"].default_value = 0.9
+        if "Emission Strength" in bsdf.inputs:
+            bsdf.inputs["Emission Strength"].default_value = 1.0
+
+        texture = nodes.new(type="ShaderNodeTexImage")
+        texture.location = (-300, 0)
+        texture.image = image
+        texture.extension = extension
+        texture.interpolation = interpolation
+        texture.projection = projection
+
+        emission_input = bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission")
+        links.new(
+            texture.outputs["Color"],
+            emission_input or bsdf.inputs["Base Color"],
+        )
+        links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+        converted += 1
+
+    print(f"Converted {converted} original material(s) to USDZ-compatible Principled BSDF")
+
+
 def assign_box_uvs(objects):
     for obj in objects:
         mesh = obj.data
@@ -222,7 +352,7 @@ def apply_transforms(objects):
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 
-def export_usdz(output_path):
+def export_usdz(output_path, texture_downscale_size="512"):
     bpy.ops.wm.usd_export(
         filepath=str(output_path),
         selected_objects_only=False,
@@ -239,7 +369,7 @@ def export_usdz(output_path):
         overwrite_textures=True,
         relative_paths=True,
         triangulate_meshes=True,
-        usdz_downscale_size="512",
+        usdz_downscale_size=texture_downscale_size,
     )
 
 
@@ -323,16 +453,22 @@ def export_model(input_path, output_path, texture_path, material_mode, ar_textur
 
     center_on_ground(objects)
 
-    if material_mode == "sharedWood":
-        ar_texture_path = create_ar_texture(texture_path, ar_texture_brightness, ar_texture_lift)
-        wood_material = create_wood_material(ar_texture_path)
-        make_single_material(objects, wood_material)
-        assign_box_uvs(objects)
+    with tempfile.TemporaryDirectory(prefix="nabe-usdz-") as texture_directory:
+        if material_mode == "sharedWood":
+            ar_texture_path = create_ar_texture(texture_path, ar_texture_brightness, ar_texture_lift)
+            wood_material = create_wood_material(ar_texture_path)
+            make_single_material(objects, wood_material)
+            assign_box_uvs(objects)
+        else:
+            make_original_materials_usdz_compatible(objects, Path(texture_directory))
 
-    apply_transforms(objects)
+        apply_transforms(objects)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    export_usdz(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        export_usdz(
+            output_path,
+            texture_downscale_size="KEEP" if material_mode == "original" else "512",
+        )
 
     min_corner, max_corner = world_bounds(objects)
     size = max_corner - min_corner
